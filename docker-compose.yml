@@ -35,6 +35,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=broker:29092
     
   consumer:
+    build: .
     image: youtube_watcher
     container_name: youtube_consumer
     command: faust -A youtube_watcher.consumer:app worker -l info
