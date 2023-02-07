@@ -22,3 +22,4 @@ class CronGetChannels(CronJobBase):
                 value=json.dumps(content),
                 on_delivery=delivery_channel_report,
             )
+            producer.flush()
