@@ -18,7 +18,7 @@ class Receiver(models.Model):
     isActive = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.type} {self.channel} - {self.profile}"
+        return f"{self.type} {self.channel} - {self.profile.username}"
 
 
 class Message(models.Model):
