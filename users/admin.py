@@ -1,3 +1,9 @@
 from django.contrib import admin
+from users.models import Profile
 
-# Register your models here.
+
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ("username", "email", "google_api_key")
+
+
+admin.site.register(Profile, ProfileAdmin)
