@@ -26,7 +26,7 @@ def delivery_channel_changes_report(err, msg):
         )
         return
     print(
-        "Channel CHanges record {} successfully produced to {} [{}] at offset {}".format(
+        "Channel Changes record {} successfully produced to {} [{}] at offset {}".format(
             msg.key(), msg.topic(), msg.partition(), msg.offset()
         )
     )
