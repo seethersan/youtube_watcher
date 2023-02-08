@@ -57,14 +57,29 @@ def get_channel(channel_id, owner_id):
 
 
 @sync_to_async
-def get_receivers(profile_id):
-    return Receiver.objects.filter(profile__id=profile_id)
+def process_receivers(profile_id, message):
+    receivers = Receiver.objects.filter(profile__id=profile_id)
+    messages_objs = []
+    for receiver in receivers:
+        if receiver.type == "telegram":
+            telegram = TelegramReceiver(receiver)
+            sent, error = telegram.send(message)
+            messages_objs.append(
+                Message(
+                    receiver=receiver,
+                    body=message,
+                    sent=sent,
+                    error=error or "",
+                )
+            )
+    if messages_objs:
+        Message.objects.bulk_create(messages_objs)
 
 
 @sync_to_async
 def get_video(channel_id, video_id):
     try:
-        video = Video.objects.get(channel_id=channel_id, video_id=video_id)
+        video = Video.objects.get(channel__channel_id=channel_id, video_id=video_id)
     except Video.DoesNotExist:
         return None
     return video
@@ -90,11 +105,6 @@ def update_video(video, video_data):
 @sync_to_async
 def create_videos(videos):
     return Video.objects.bulk_create(videos)
-
-
-@sync_to_async
-def create_messages(messages):
-    return Message.objects.bulk_create(messages)
 
 
 @sync_to_async
@@ -129,9 +139,6 @@ async def process_channel(stream):
         for video_id in videos_ids:
             payload = fetch_videos_page(google_api_key, video_id)
             videos.extend(payload.get("items"))
-            if page_token := payload.get("nextPageToken"):
-                payload = fetch_videos_page(google_api_key, video_id, page_token)
-                videos.extend(payload.get("items"))
             videos_objs = []
             total_views = 0
             total_likes = 0
@@ -140,6 +147,7 @@ async def process_channel(stream):
                 total_views += int(item.get("statistics").get("viewCount", 0))
                 total_likes += int(item.get("statistics").get("likeCount", 0))
                 total_comments += int(item.get("statistics").get("commentCount", 0))
+                thumbnail = item.get("snippet").get("thumbnails").get("high")
                 videos_objs.append(
                     Video(
                         title=item.get("snippet").get("title"),
@@ -148,10 +156,7 @@ async def process_channel(stream):
                         views=item.get("statistics").get("viewCount", 0),
                         likes=item.get("statistics").get("likeCount", 0),
                         comments=item.get("statistics").get("commentCount", 0),
-                        thumbnail=item.get("snippet")
-                        .get("thumbnails")
-                        .get("maxres")
-                        .get("url"),
+                        thumbnail=thumbnail.get("url") if thumbnail else None,
                         channel=instance,
                     )
                 )
@@ -183,9 +188,6 @@ async def process_channel_updates(stream):
         for video_id in videos_ids:
             payload = fetch_videos_page(google_api_key, video_id)
             videos.extend(payload.get("items"))
-            if page_token := payload.get("nextPageToken"):
-                payload = fetch_videos_page(google_api_key, video_id, page_token)
-                videos.extend(payload.get("items"))
             videos_objs = []
             total_views = 0
             total_likes = 0
@@ -195,6 +197,7 @@ async def process_channel_updates(stream):
                 total_likes += int(item.get("statistics").get("likeCount", 0))
                 total_comments += int(item.get("statistics").get("commentCount", 0))
                 video = await get_video(record["channel_id"], item.get("id"))
+                thumbnail = item.get("snippet").get("thumbnails").get("high")
                 if not video:
                     videos_objs.append(
                         Video(
@@ -204,10 +207,7 @@ async def process_channel_updates(stream):
                             views=item.get("statistics").get("viewCount", 0),
                             likes=item.get("statistics").get("likeCount", 0),
                             comments=item.get("statistics").get("commentCount", 0),
-                            thumbnail=item.get("snippet")
-                            .get("thumbnails")
-                            .get("maxres")
-                            .get("url"),
+                            thumbnail=thumbnail.get("url") if thumbnail else None,
                             channel=instance,
                         )
                     )
@@ -218,10 +218,7 @@ async def process_channel_updates(stream):
                         "views": item.get("statistics").get("viewCount", 0),
                         "likes": item.get("statistics").get("likeCount", 0),
                         "comments": item.get("statistics").get("commentCount", 0),
-                        "thumbnail": item.get("snippet")
-                        .get("thumbnails")
-                        .get("maxres")
-                        .get("url"),
+                        "thumbnail": thumbnail.get("url") if thumbnail else None,
                     }
                     await update_video(video, video_data)
             if videos_objs:
@@ -232,19 +229,4 @@ async def process_channel_updates(stream):
 @app.agent(video_changes_topic)
 async def process_video_changes(stream):
     async for record in stream:
-        receiver = await get_receivers(record["owner_id"])
-        messages_objs = []
-        for receiver in receiver:
-            if receiver.type == "telegram":
-                telegram = TelegramReceiver(receiver)
-                sent, error = telegram.send(record["message"])
-                messages_objs.append(
-                    Message(
-                        receiver=receiver,
-                        body=record["message"],
-                        sent=sent,
-                        error=error or "",
-                    )
-                )
-        if messages_objs:
-            await create_messages(messages_objs)
+        await process_receivers(record["owner"], record["message"])
