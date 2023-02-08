@@ -1,17 +1,17 @@
 from djongo import models
 from users.models import Profile
 from encrypted_model_fields.fields import EncryptedCharField
-
-RECEIVER_TYPES = (
-    ("email", "Email"),
-    ("slack", "Slack"),
-    ("discord", "Discord"),
-    ("telegram", "Telegram"),
-)
+from django_choices_field import TextChoicesField
 
 
 class Receiver(models.Model):
-    type = models.CharField(max_length=100, choices=RECEIVER_TYPES)
+    class Type(models.TextChoices):
+        EMAIL = "email", "Email"
+        SLACK = "slack", "Slack"
+        DISCORD = "discord", "Discord"
+        TELEGRAM = "telegram", "Telegram"
+
+    type = TextChoicesField(choices_enum=Type)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
     token = EncryptedCharField(max_length=100, blank=True, null=True)
     channel = models.CharField(max_length=100)
