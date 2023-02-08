@@ -18,6 +18,7 @@ from channels.producers import (
     delivery_channel_report,
 )
 from users.models import Profile
+from receivers.models import Receiver, Message
 
 
 @gql.django.type(Profile)
@@ -26,6 +27,45 @@ class ProfileType:
     username: str
     email: str
     google_api_key: str
+
+
+@gql.django.type(Receiver)
+class ReceiverType(gql.Node):
+    type: str
+    profile: ProfileType
+    token: str
+    channel: str
+    isActive: bool
+
+
+@gql.django.input(Receiver)
+class ReceiverFilter:
+    type: typing.Optional[str]
+    profile: typing.Optional[int]
+    channel: typing.Optional[int]
+    isActive: typing.Optional[bool]
+
+
+@gql.django.input(Receiver)
+class ReceiverInput:
+    type: gql.auto
+    token: str
+    channel: int
+    isActive: bool
+
+
+@gql.django.type(Message)
+class MessageType(gql.Node):
+    receiver: ReceiverType
+    body: str
+    sent: bool
+    error: str
+
+
+@gql.django.input(Message)
+class MessageFilter:
+    receiver: typing.Optional[int]
+    sent: typing.Optional[bool]
 
 
 @gql.django.type(Video)
@@ -42,18 +82,6 @@ class VideoType(gql.Node):
 
 @gql.django.input(Video)
 class VideoInput:
-    title: str
-    video_id: str
-    description: str
-    views: int
-    likes: int
-    dislikes: int
-    comments: int
-    isActive: bool
-
-
-@gql.django.partial(Video)
-class VideoPartial(gql.NodeInput):
     title: str
     video_id: str
     description: str
@@ -83,17 +111,22 @@ class ChannelInput:
 
 
 @gql.django.input(Channel)
-class ChannelPartial(gql.NodeInput):
-    name: gql.auto
-    channel_id: gql.auto
-    description: gql.auto
-    isActive: gql.auto
+class ChannelFilter:
+    name: typing.Optional[str]
+    channel_id: typing.Optional[str]
+    isActive: typing.Optional[bool]
 
 
 @gql.type
 class Mutation:
-    @gql.mutation
-    def create_channel(self, info: Info, input: ChannelInput) -> ChannelType:
+    @gql.mutation(directives=[IsAuthenticated])
+    def createReceiver(self, info: Info, input: ReceiverInput) -> ReceiverType:
+        data = vars(input)
+        data["profile"] = get_user(info)
+        return Receiver.objects.create(**data)
+
+    @gql.mutation(directives=[IsAuthenticated])
+    def createChannel(self, info: Info, input: ChannelInput) -> ChannelType:
         data = vars(input)
         data["owner"] = get_user(info)
         channel = Channel.objects.create(**data)
@@ -112,6 +145,7 @@ class Mutation:
         channel = Channel.objects.get(id=channel_id)
         if channel.profile.user == get_user(info):
             channel.is_active = True
+            channel.save(update_fields=["is_active"])
             return channel
 
     @gql.django.field(directives=[IsAuthenticated])
@@ -119,6 +153,7 @@ class Mutation:
         channel = Channel.objects.get(id=channel_id)
         if channel.profile.user == get_user(info):
             channel.is_active = False
+            channel.save(update_fields=["is_active"])
             return channel
 
     @gql.django.field(directives=[IsAuthenticated])
@@ -126,6 +161,7 @@ class Mutation:
         video = Video.objects.get(id=video_id)
         if video.profile.user == get_user(info):
             video.is_active = True
+            video.save(update_fields=["is_active"])
             return video
 
     @gql.django.field(directives=[IsAuthenticated])
@@ -133,10 +169,11 @@ class Mutation:
         video = Video.objects.get(id=video_id)
         if video.profile.user == get_user(info):
             video.is_active = False
+            video.save(update_fields=["is_active"])
             return video
 
     @gql.django.field(directives=[IsAuthenticated])
-    def set_google_api_key(self, api_key: str, info: Info) -> "ProfileType":
+    def setGoogleApikey(self, api_key: str, info: Info) -> "ProfileType":
         profile = get_user(info)
         profile.google_api_key = api_key
         profile.save()
@@ -175,8 +212,53 @@ class Query(UserQueries):
             IsAuthenticated(),
         ]
     )
-    def getChannels(self, info: Info) -> typing.List[ChannelType]:
+    def getChannels(self, info: Info, input: ChannelFilter) -> typing.List[ChannelType]:
+        data = vars(input)
+        if profile := data.get("profile"):
+            if profile != info.context.request.user.id:
+                raise PermissionError("Not allowed")
+        channels = Channel.objects.filter(owner=get_user(info))
+        if name := data.get("name"):
+            channels = channels.filter(name=name)
+        if channel_id := data.get("channel_id"):
+            channels = channels.filter(channel_id=channel_id)
+        if isActive := data.get("isActive"):
+            channels = channels.filter(isActive__in=[isActive])
         return Channel.objects.filter(owner=get_user(info))
+
+    @gql.django.field(
+        directives=[
+            IsAuthenticated(),
+        ]
+    )
+    def getReceivers(
+        self, info: Info, input: ReceiverFilter
+    ) -> typing.List[ReceiverType]:
+        data = vars(input)
+        if profile := data.get("profile"):
+            if profile != info.context.request.user.id:
+                raise PermissionError("Not allowed")
+        receivers = Receiver.objects.filter(profile=get_user(info))
+        if receiver_type := data.get("type"):
+            receivers = receivers.filter(type=receiver_type)
+        return receivers
+
+    @gql.django.field(
+        directives=[
+            IsAuthenticated(),
+        ]
+    )
+    def getMessages(self, info: Info, input: MessageFilter) -> typing.List[MessageType]:
+        data = vars(input)
+        if profile := data.get("profile"):
+            if profile != info.context.request.user.id:
+                raise PermissionError("Not allowed")
+        messages = Message.objects.filter(receiver__profile=get_user(info))
+        if receiver := data.get("receiver"):
+            messages = messages.filter(receiver__id=receiver)
+        if sent := data.get("sent"):
+            messages = messages.filter(sent__in=[sent])
+        return messages
 
 
 schema = JwtSchema(
