@@ -22,17 +22,6 @@ services:
     depends_on:
         - mongodb
         - broker
-    environment:
-      - SECRET_KEY=#5rf#)h+37^g&8kt09*336o&pa2b662%6)&yto%-0(51&r!z(k
-      - DEBUG=True
-      - MONGODB_NAME=mongodb
-      - MONGODB_HOST=mongodb
-      - MONGODB_PORT=27017
-      - MONGODB_USERNAME=root
-      - MONGODB_PASSWORD=rootpassword
-      - MONGODB_DATABASE=youtube_watcher
-      - FIELD_ENCRYPTION_KEY=_-1Fw33Pl_6jSXK6NUxm02MnYjODOzrJjCFMPUuxOnY=
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
     
   consumer:
     build: .
@@ -45,17 +34,6 @@ services:
       - mongodb
       - broker
       - web
-    environment:
-      - SECRET_KEY=#5rf#)h+37^g&8kt09*336o&pa2b662%6)&yto%-0(51&r!z(k
-      - DEBUG=True
-      - MONGODB_NAME=mongodb
-      - MONGODB_HOST=mongodb
-      - MONGODB_PORT=27017
-      - MONGODB_USERNAME=root
-      - MONGODB_PASSWORD=rootpassword
-      - MONGODB_DATABASE=youtube_watcher
-      - FIELD_ENCRYPTION_KEY=_-1Fw33Pl_6jSXK6NUxm02MnYjODOzrJjCFMPUuxOnY=
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
         
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
