@@ -15,7 +15,7 @@ spec:
         name: youtube-watcher
     spec:
       containers:
-        - name: youtube_watcher
+        - name: youtube-watcher
           image: tokhna/youtube_watcher:"$RELEASE_VERSION"
           command: ["./docker-entrypoint.sh"]
           imagePullPolicy: Always
@@ -90,7 +90,7 @@ spec:
         name: youtube_watcher_consumer
     spec:
       containers:
-        - name: youtube_watcher_consumer
+        - name: youtube-watcher-consumer
           image: tokhna/youtube_watcher:"$RELEASE_VERSION"
           command: ["faust"]
           args: [-A", "youtube_watcher.consumer:app", "worker", "-l", "info"]
