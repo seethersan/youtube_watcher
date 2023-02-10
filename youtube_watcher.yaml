@@ -76,18 +76,18 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: youtube_watcher_consumer
+  name: youtube-watcher-consumer
   labels:
     app: youtube_watchyoutube_watcher_consumerer
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: youtube_watcher_consumer
+      name: youtube-watcher-consumer
   template:
     metadata:
       labels:
-        name: youtube_watcher_consumer
+        name: youtube-watcher-consumer
     spec:
       containers:
         - name: youtube-watcher-consumer
