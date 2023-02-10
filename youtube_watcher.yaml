@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youtube_watcher
+  labels:
+    app: youtube_watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: youtube_watcher
+  template:
+    metadata:
+      labels:
+        name: youtube_watcher
+    spec:
+      containers:
+        - name: youtube_watcher
+          image: tokhna/youtube_watcher:"$RELEASE_VERSION"
+          command: "./docker-entrypoint.sh"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: SECRET_KEY
+            - name: DEBUG
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: DEBUG
+            - name: MONGODB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_NAME
+            - name: MONGODB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_HOST
+            - name: MONGODB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_PORT
+            - name: MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_USERNAME
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_PASSWORD
+            - name: MONGODB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_DATABASE
+            - name: FIELD_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: FIELD_ENCRYPTION_KEY
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: KAFKA_BOOTSTRAP_SERVERS
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youtube_watcher_consumer
+  labels:
+    app: youtube_watchyoutube_watcher_consumerer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: youtube_watcher_consumer
+  template:
+    metadata:
+      labels:
+        name: youtube_watcher_consumer
+    spec:
+      containers:
+        - name: youtube_watcher_consumer
+          image: tokhna/youtube_watcher:"$RELEASE_VERSION"
+          command: "faust -A youtube_watcher.consumer:app worker -l info"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: SECRET_KEY
+            - name: DEBUG
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: DEBUG
+            - name: MONGODB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_NAME
+            - name: MONGODB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_HOST
+            - name: MONGODB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_PORT
+            - name: MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_USERNAME
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_PASSWORD
+            - name: MONGODB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: MONGODB_DATABASE
+            - name: FIELD_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: FIELD_ENCRYPTION_KEY
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: KAFKA_BOOTSTRAP_SERVERS
+---
+# START Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: youtube_watcher
+  labels:
+    app: youtube_watcher
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80 #port that the service exposes
+      targetPort: 8000 #port that the app is receiving requests from via the pod
+  selector:
+    name: youtube_watcher
+# END SERVICE
