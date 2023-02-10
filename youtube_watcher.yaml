@@ -17,7 +17,7 @@ spec:
       containers:
         - name: youtube_watcher
           image: tokhna/youtube_watcher:"$RELEASE_VERSION"
-          command: "./docker-entrypoint.sh"
+          command: ["./docker-entrypoint.sh"]
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
