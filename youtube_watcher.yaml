@@ -95,7 +95,7 @@ spec:
         - name: youtube-watcher-consumer
           image: "tokhna/youtube_watcher:${RELEASE_VERSION}"
           command:
-            - faust
+            - "faust"
             - "-A"
             - "youtube_watcher.consumer:app"
             - "worker"

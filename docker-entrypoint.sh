@@ -1,9 +1,9 @@
 #!/bin/bash
 # Cron
 service cron restart
-python /code/manage.py runcrons
+python /home/app/webapp/manage.py runcrons
 # Django
-python /code/manage.py migrate
-python /code/manage.py collectstatic --noinput
-python /code/manage.py runserver 0.0.0.0:8000
+python /home/app/webapp/manage.py migrate
+python /home/app/webapp/manage.py collectstatic --noinput
+python /home/app/webapp/manage.py runserver 0.0.0.0:8000
 exec "$@"
