@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: youtube_watcher
+  name: youtube-watcher
   labels:
-    app: youtube_watcher
+    app: youtube-watcher
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: youtube_watcher
+      name: youtube-watcher
   template:
     metadata:
       labels:
-        name: youtube_watcher
+        name: youtube-watcher
     spec:
       containers:
         - name: youtube_watcher
@@ -153,14 +153,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: youtube_watcher
+  name: youtube-watcher
   labels:
-    app: youtube_watcher
+    app: youtube-watcher
 spec:
   type: LoadBalancer
   ports:
     - port: 80 #port that the service exposes
       targetPort: 8000 #port that the app is receiving requests from via the pod
   selector:
-    name: youtube_watcher
+    name: youtube-watcher
 # END SERVICE
