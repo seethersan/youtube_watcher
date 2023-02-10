@@ -92,7 +92,8 @@ spec:
       containers:
         - name: youtube_watcher_consumer
           image: tokhna/youtube_watcher:"$RELEASE_VERSION"
-          command: "faust -A youtube_watcher.consumer:app worker -l info"
+          command: ["faust"]
+          args: [-A", "youtube_watcher.consumer:app", "worker", "-l", "info"]
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
