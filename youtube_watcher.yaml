@@ -17,7 +17,9 @@ spec:
       containers:
         - name: youtube-watcher
           image: "tokhna/youtube_watcher:${RELEASE_VERSION}"
-          command: ["./docker-entrypoint.sh"]
+          command:
+            - "/bin/sh"
+            - "/home/app/webapp/docker-entrypoint.sh"
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -92,8 +94,13 @@ spec:
       containers:
         - name: youtube-watcher-consumer
           image: "tokhna/youtube_watcher:${RELEASE_VERSION}"
-          command: ["faust"]
-          args: [-A", "youtube_watcher.consumer:app", "worker", "-l", "info"]
+          command:
+            - faust
+            - "-A"
+            - "youtube_watcher.consumer:app"
+            - "worker"
+            - "-l"
+            - "info"
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
