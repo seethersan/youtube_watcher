@@ -120,6 +120,11 @@ spec:
                 secretKeyRef:
                   name: youtube-watcher-secrets
                   key: DEBUG
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: ALLOWED_HOSTS
             - name: MONGODB_NAME
               valueFrom:
                 secretKeyRef:
