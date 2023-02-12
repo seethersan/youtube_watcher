@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                         blank=True, null=True
                     ),
                 ),
-                ("channel", models.CharField(max_length=100)),
+                ("playlist", models.CharField(max_length=100)),
                 ("isActive", models.BooleanField(default=True)),
                 (
                     "profile",

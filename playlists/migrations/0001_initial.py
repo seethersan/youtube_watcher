@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="channels",
+            name="playlists",
             fields=[
                 (
                     "id",
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
-                ("channel_id", models.CharField(max_length=100)),
+                ("playlist_id", models.CharField(max_length=100)),
                 ("description", models.TextField()),
                 ("subscribers", models.IntegerField()),
                 ("views", models.IntegerField()),

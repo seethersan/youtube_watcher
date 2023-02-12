@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("channels", "0010_channel_owner_channel_id"),
+        ("playlists", "0010_playlist_owner_playlist_id"),
     ]
 
     operations = [
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="video",
             constraint=models.UniqueConstraint(
-                fields=("video_id", "channel_id"), name="video_id_channel_id"
+                fields=("video_id", "playlist_id"), name="video_id_playlist_id"
             ),
         ),
     ]

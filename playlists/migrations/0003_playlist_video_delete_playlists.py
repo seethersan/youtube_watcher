@@ -6,12 +6,12 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("channels", "0002_initial"),
+        ("playlists", "0002_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="Channel",
+            name="Playlist",
             fields=[
                 (
                     "id",
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
-                ("channel_id", models.CharField(max_length=100)),
+                ("playlist_id", models.CharField(max_length=100)),
                 ("description", models.TextField()),
                 ("subscribers", models.IntegerField()),
                 ("views", models.IntegerField()),
@@ -57,16 +57,16 @@ class Migration(migrations.Migration):
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("is_active", models.BooleanField(default=True)),
                 (
-                    "channel",
+                    "playlist",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="channel_videos",
-                        to="channels.channel",
+                        related_name="playlist_videos",
+                        to="playlists.playlist",
                     ),
                 ),
             ],
         ),
         migrations.DeleteModel(
-            name="channels",
+            name="playlists",
         ),
     ]

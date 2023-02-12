@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         (
-            "channels",
-            "0008_alter_channel_comments_alter_channel_likes_and_more",
+            "playlists",
+            "0008_alter_playlist_comments_alter_playlist_likes_and_more",
         ),
     ]
 

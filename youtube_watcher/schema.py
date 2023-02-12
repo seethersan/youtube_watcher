@@ -12,10 +12,10 @@ from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.permissions import IsAuthenticated
 
 
-from channels.models import Channel, Video
-from channels.producers import (
+from playlists.models import Playlist, Video
+from playlists.producers import (
     producer,
-    delivery_channel_report,
+    delivery_playlist_report,
 )
 from users.models import Profile
 from receivers.models import Receiver, Message
@@ -92,28 +92,28 @@ class VideoInput:
     isActive: bool
 
 
-@gql.django.type(Channel)
-class ChannelType(gql.Node):
+@gql.django.type(Playlist)
+class PlaylistType(gql.Node):
     name: gql.auto
-    channel_id: gql.auto
+    playlist_id: gql.auto
     description: gql.auto
     isActive: gql.auto
-    channel_videos: typing.List[VideoType]
+    playlist_videos: typing.List[VideoType]
     owner: ProfileType
 
 
-@gql.django.input(Channel)
-class ChannelInput:
+@gql.django.input(Playlist)
+class PlaylistInput:
     name: gql.auto
-    channel_id: gql.auto
+    playlist_id: gql.auto
     description: gql.auto
     isActive: gql.auto
 
 
-@gql.django.input(Channel)
-class ChannelFilter:
+@gql.django.input(Playlist)
+class PlaylistFilter:
     name: typing.Optional[str]
-    channel_id: typing.Optional[str]
+    playlist_id: typing.Optional[str]
     isActive: typing.Optional[bool]
 
 
@@ -126,35 +126,35 @@ class Mutation:
         return Receiver.objects.create(**data)
 
     @gql.mutation(directives=[IsAuthenticated])
-    def createChannel(self, info: Info, input: ChannelInput) -> ChannelType:
+    def createPlaylist(self, info: Info, input: PlaylistInput) -> PlaylistType:
         data = vars(input)
         data["owner"] = get_user(info)
-        channel = Channel.objects.create(**data)
-        content = channel.to_dict()
+        playlist = Playlist.objects.create(**data)
+        content = playlist.to_dict()
         producer.produce(
-            "youtube-watcher-channels",
+            "youtube-watcher-playlists",
             key=str(content.pop("id")),
             value=json.dumps(content),
-            on_delivery=delivery_channel_report,
+            on_delivery=delivery_playlist_report,
         )
         producer.flush()
-        return channel
+        return playlist
 
     @gql.django.field(directives=[IsAuthenticated])
-    def activateChannel(self, channel_id: int, info: Info) -> "ChannelType":
-        channel = Channel.objects.get(id=channel_id)
-        if channel.profile.user == get_user(info):
-            channel.is_active = True
-            channel.save(update_fields=["is_active"])
-            return channel
+    def activatePlaylist(self, playlist_id: int, info: Info) -> "PlaylistType":
+        playlist = Playlist.objects.get(id=playlist_id)
+        if playlist.profile.user == get_user(info):
+            playlist.is_active = True
+            playlist.save(update_fields=["is_active"])
+            return playlist
 
     @gql.django.field(directives=[IsAuthenticated])
-    def deactivateChannel(self, channel_id: int, info: Info) -> "ChannelType":
-        channel = Channel.objects.get(id=channel_id)
-        if channel.profile.user == get_user(info):
-            channel.is_active = False
-            channel.save(update_fields=["is_active"])
-            return channel
+    def deactivatePlaylist(self, playlist_id: int, info: Info) -> "PlaylistType":
+        playlist = Playlist.objects.get(id=playlist_id)
+        if playlist.profile.user == get_user(info):
+            playlist.is_active = False
+            playlist.save(update_fields=["is_active"])
+            return playlist
 
     @gql.django.field(directives=[IsAuthenticated])
     def activateVideo(self, video_id: int, info: Info) -> "VideoType":
@@ -212,19 +212,21 @@ class Query(UserQueries):
             IsAuthenticated(),
         ]
     )
-    def getChannels(self, info: Info, input: ChannelFilter) -> typing.List[ChannelType]:
+    def getPlaylists(
+        self, info: Info, input: PlaylistFilter
+    ) -> typing.List[PlaylistType]:
         data = vars(input)
         if profile := data.get("profile"):
             if profile != info.context.request.user.id:
                 raise PermissionError("Not allowed")
-        channels = Channel.objects.filter(owner=get_user(info))
+        playlists = Playlist.objects.filter(owner=get_user(info))
         if name := data.get("name"):
-            channels = channels.filter(name=name)
-        if channel_id := data.get("channel_id"):
-            channels = channels.filter(channel_id=channel_id)
+            playlists = playlists.filter(name=name)
+        if playlist_id := data.get("playlist_id"):
+            playlists = playlists.filter(playlist_id=playlist_id)
         if isActive := data.get("isActive"):
-            channels = channels.filter(isActive__in=[isActive])
-        return Channel.objects.filter(owner=get_user(info))
+            playlists = playlists.filter(isActive__in=[isActive])
+        return Playlist.objects.filter(owner=get_user(info))
 
     @gql.django.field(
         directives=[

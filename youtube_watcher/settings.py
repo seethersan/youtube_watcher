@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "strawberry_django",
     "encrypted_model_fields",
     "gqlauth",
-    "channels",
+    "playlists",
     "users",
     "receivers",
 ]
@@ -186,7 +186,7 @@ KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9
 # cron jobs
 
 CRON_CLASSES = [
-    "channels.cron.CronGetChannels",
+    "playlists.cron.CronGetPlaylists",
 ]
 # ACS Email
 ACS_CONNECTION_STRING = os.environ.get("ACS_CONNECTION_STRING", "")

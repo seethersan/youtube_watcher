@@ -5,12 +5,12 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("channels", "0004_channel_owner"),
+        ("playlists", "0004_playlist_owner"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name="channel",
+            model_name="playlist",
             old_name="is_active",
             new_name="isActive",
         ),
@@ -20,11 +20,11 @@ class Migration(migrations.Migration):
             new_name="isActive",
         ),
         migrations.RemoveField(
-            model_name="channel",
+            model_name="playlist",
             name="created_at",
         ),
         migrations.RemoveField(
-            model_name="channel",
+            model_name="playlist",
             name="updated_at",
         ),
         migrations.RemoveField(

@@ -4,29 +4,29 @@ from django.db.models.signals import pre_save
 from confluent_kafka import SerializingProducer
 
 
-from channels.models import Channel, Video
+from playlists.models import Playlist, Video
 from youtube_watcher.settings import KAFKA_BOOTSTRAP_SERVERS
 
 
-def delivery_channel_report(err, msg):
+def delivery_playlist_report(err, msg):
     if err is not None:
-        print("Delivery failed for Channel record {}: {}".format(msg.key(), err))
+        print("Delivery failed for Playlist record {}: {}".format(msg.key(), err))
         return
     print(
-        "Channel record {} successfully produced to {} [{}] at offset {}".format(
+        "Playlist record {} successfully produced to {} [{}] at offset {}".format(
             msg.key(), msg.topic(), msg.partition(), msg.offset()
         )
     )
 
 
-def delivery_channel_changes_report(err, msg):
+def delivery_playlist_changes_report(err, msg):
     if err is not None:
         print(
-            "Delivery failed for Channel CHanges record {}: {}".format(msg.key(), err)
+            "Delivery failed for Playlist CHanges record {}: {}".format(msg.key(), err)
         )
         return
     print(
-        "Channel Changes record {} successfully produced to {} [{}] at offset {}".format(
+        "Playlist Changes record {} successfully produced to {} [{}] at offset {}".format(
             msg.key(), msg.topic(), msg.partition(), msg.offset()
         )
     )
@@ -61,8 +61,8 @@ producer_config = {
 producer = SerializingProducer(producer_config)
 
 
-@receiver(pre_save, sender=Channel)
-def channel_changed(sender, instance, **kwargs):
+@receiver(pre_save, sender=Playlist)
+def playlist_changed(sender, instance, **kwargs):
     try:
         obj = sender.objects.get(id=instance.id)
     except sender.DoesNotExist:
@@ -76,10 +76,10 @@ def channel_changed(sender, instance, **kwargs):
                 )
         if changes:
             producer.produce(
-                "youtube-watcher-channels-changes",
+                "youtube-watcher-playlists-changes",
                 key=str(instance.id),
                 value="\n".join(changes),
-                on_delivery=delivery_channel_changes_report,
+                on_delivery=delivery_playlist_changes_report,
             )
 
 
@@ -98,7 +98,7 @@ def video_changed(sender, instance, **kwargs):
                 )
         if changes:
             video = {
-                "owner": instance.channel.owner.id,
+                "owner": instance.playlist.owner.id,
                 "message": instance.title + "\n" + "\n".join(changes),
             }
             producer.produce(

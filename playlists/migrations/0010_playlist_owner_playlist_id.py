@@ -5,14 +5,14 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("channels", "0009_remove_video_dislikes"),
+        ("playlists", "0009_remove_video_dislikes"),
     ]
 
     operations = [
         migrations.AddConstraint(
-            model_name="channel",
+            model_name="playlist",
             constraint=models.UniqueConstraint(
-                fields=("owner", "channel_id"), name="owner_channel_id"
+                fields=("owner", "playlist_id"), name="owner_playlist_id"
             ),
         ),
     ]

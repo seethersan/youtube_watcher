@@ -4,9 +4,9 @@ from djongo import models
 from users.models import Profile
 
 
-class Channel(models.Model):
+class Playlist(models.Model):
     name = models.CharField(max_length=100)
-    channel_id = models.CharField(max_length=100)
+    playlist_id = models.CharField(max_length=100)
     description = models.TextField()
     subscribers = models.IntegerField(blank=True, default=0)
     views = models.IntegerField(blank=True, default=0)
@@ -14,13 +14,13 @@ class Channel(models.Model):
     comments = models.IntegerField(blank=True, default=0)
     isActive = models.BooleanField(default=True)
     owner = models.ForeignKey(
-        Profile, on_delete=models.CASCADE, related_name="profile_channels"
+        Profile, on_delete=models.CASCADE, related_name="profile_playlists"
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["owner", "channel_id"], name="owner_channel_id"
+                fields=["owner", "playlist_id"], name="owner_playlist_id"
             )
         ]
 
@@ -31,7 +31,7 @@ class Channel(models.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "channel_id": self.channel_id,
+            "playlist_id": self.playlist_id,
             "description": self.description,
             "subscribers": self.subscribers,
             "views": self.views,
@@ -51,14 +51,14 @@ class Video(models.Model):
     comments = models.IntegerField(blank=True, default=0)
     isActive = models.BooleanField(default=True)
     thumbnail = models.CharField(max_length=250, blank=True)
-    channel = models.ForeignKey(
-        Channel, on_delete=models.CASCADE, related_name="channel_videos"
+    playlist = models.ForeignKey(
+        Playlist, on_delete=models.CASCADE, related_name="playlist_videos"
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["video_id", "channel_id"], name="video_id_channel_id"
+                fields=["video_id", "playlist_id"], name="video_id_playlist_id"
             )
         ]
 
@@ -73,7 +73,7 @@ class Video(models.Model):
             "comments": self.comments,
             "isActive": self.isActive,
             "thumbnail": self.thumbnail,
-            "channel": self.channel_id,
+            "playlist": self.playlist_id,
         }
 
     def __str__(self):

@@ -12,7 +12,7 @@ django.setup()
 from django.conf import settings
 
 
-from channels.models import Channel, Video
+from playlists.models import Playlist, Video
 from users.models import Profile
 from receivers.models import Receiver, Message
 from receivers.receivers import TelegramReceiver
@@ -20,17 +20,17 @@ from receivers.receivers import TelegramReceiver
 app = faust.App("youtube_watcher", broker=f"kafka://{settings.KAFKA_BOOTSTRAP_SERVERS}")
 
 
-channel_topic = app.topic("youtube-watcher-channels")
-channel_update_topic = app.topic("youtube-watcher-channels-updates")
+playlist_topic = app.topic("youtube-watcher-playlists")
+playlist_update_topic = app.topic("youtube-watcher-playlists-updates")
 video_changes_topic = app.topic("youtube-watcher-videos-changes")
 
 
-def fetch_playlist_items_page(google_api_key, youtube_channel_id, page_token=None):
+def fetch_playlist_items_page(google_api_key, youtube_playlist_id, page_token=None):
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "contentDetails",
         "key": google_api_key,
-        "playlistId": youtube_channel_id,
+        "playlistId": youtube_playlist_id,
         "pageToken": page_token,
     }
     response = requests.get(url, params=params)
@@ -52,8 +52,8 @@ def fetch_videos_page(google_api_key, video_id, page_token=None):
 
 
 @sync_to_async
-def get_channel(channel_id, owner_id):
-    return Channel.objects.get(channel_id=channel_id, owner__id=owner_id)
+def get_playlist(playlist_id, owner_id):
+    return Playlist.objects.get(playlist_id=playlist_id, owner__id=owner_id)
 
 
 @sync_to_async
@@ -77,9 +77,9 @@ def process_receivers(profile_id, message):
 
 
 @sync_to_async
-def get_video(channel_id, video_id):
+def get_video(playlist_id, video_id):
     try:
-        video = Video.objects.get(channel__channel_id=channel_id, video_id=video_id)
+        video = Video.objects.get(playlist__playlist_id=playlist_id, video_id=video_id)
     except Video.DoesNotExist:
         return None
     return video
@@ -108,122 +108,155 @@ def create_videos(videos):
 
 
 @sync_to_async
-def update_channel(channel, total_views, total_comments, total_likes):
-    channel.total_views = total_views
-    channel.total_comments = total_comments
-    channel.total_likes = total_likes
-    channel.save()
+def update_playlist(playlist, total_views, total_comments, total_likes):
+    playlist.total_views = total_views
+    playlist.total_comments = total_comments
+    playlist.total_likes = total_likes
+    playlist.save()
 
 
-@app.agent(channel_topic)
-async def process_channel(stream):
+@app.agent(playlist_topic)
+async def process_playlist(stream):
     async for record in stream:
-        instance = await get_channel(record["channel_id"], record["owner"])
+        instance = await get_playlist(record["playlist_id"], record["owner"])
         videos_ids = []
-        videos = []
+        videos_objs = []
+        page_token = None
+
+        total_views = 0
+        total_likes = 0
+        total_comments = 0
+
         google_api_key = await get_google_api_key(record["owner"])
-        payload = fetch_playlist_items_page(google_api_key, record["channel_id"])
-        videos_ids.extend(
-            [item.get("contentDetails").get("videoId") for item in payload.get("items")]
-        )
-        while page_token := payload.get("nextPageToken"):
+
+        while True:
             payload = fetch_playlist_items_page(
-                google_api_key, record["channel_id"], page_token
+                google_api_key, record["playlist_id"], page_token
             )
-            videos_ids.extend(
-                [
-                    item.get("contentDetails").get("videoId")
-                    for item in payload.get("items")
-                ]
+            page_token = payload.get("nextPageToken")
+            if page_token is None:
+                break
+            for video in payload.get("items"):
+                video_id = video.get("contentDetails").get("videoId")
+                videos_ids.append(video_id)
+
+        print(videos_ids)
+        videos_ids = list(set(videos_ids))
+        print(videos_ids)
+
+        page_token = None
+
+        while True:
+            payload = fetch_videos_page(
+                google_api_key, ",".join(videos_ids), page_token
             )
-        for video_id in videos_ids:
-            payload = fetch_videos_page(google_api_key, video_id)
-            videos.extend(payload.get("items"))
-            videos_objs = []
-            total_views = 0
-            total_likes = 0
-            total_comments = 0
-            for item in videos:
-                total_views += int(item.get("statistics").get("viewCount", 0))
-                total_likes += int(item.get("statistics").get("likeCount", 0))
-                total_comments += int(item.get("statistics").get("commentCount", 0))
-                thumbnail = item.get("snippet").get("thumbnails").get("high")
-                videos_objs.append(
-                    Video(
-                        title=item.get("snippet").get("title"),
-                        video_id=item.get("id"),
-                        description=item.get("snippet").get("description"),
-                        views=item.get("statistics").get("viewCount", 0),
-                        likes=item.get("statistics").get("likeCount", 0),
-                        comments=item.get("statistics").get("commentCount", 0),
-                        thumbnail=thumbnail.get("url") if thumbnail else None,
-                        channel=instance,
+            page_token = payload.get("nextPageToken")
+            for video in payload.get("items"):
+                video_id = video.get("id")
+                thumbnail = video.get("snippet").get("thumbnails").get("high")
+                video_data = {
+                    "title": video.get("snippet").get("title"),
+                    "description": video.get("snippet").get("description"),
+                    "views": video.get("statistics").get("viewCount", 0),
+                    "likes": video.get("statistics").get("likeCount", 0),
+                    "comments": video.get("statistics").get("commentCount", 0),
+                    "thumbnail": thumbnail.get("url") if thumbnail else "",
+                }
+                total_views += int(video_data.get("views"))
+                total_likes += int(video_data.get("likes"))
+                total_comments += int(video_data.get("comments"))
+                video_obj = await get_video(record["playlist_id"], video_id)
+                if video_obj:
+                    await update_video(video_obj, video_data)
+                else:
+                    videos_objs.append(
+                        Video(
+                            title=video_data.get("title"),
+                            video_id=video_id,
+                            description=video_data.get("description"),
+                            views=video_data.get("views"),
+                            likes=video_data.get("likes"),
+                            comments=video_data.get("comments"),
+                            thumbnail=video_data.get("thumbnail"),
+                            playlist=instance,
+                        )
                     )
-                )
-            await create_videos(videos_objs)
-            await update_channel(instance, total_views, total_comments, total_likes)
+            if page_token is None:
+                break
+        await create_videos(videos_objs)
+        await update_playlist(instance, total_views, total_comments, total_likes)
 
 
-@app.agent(channel_update_topic)
-async def process_channel_updates(stream):
+@app.agent(playlist_update_topic)
+async def process_playlist_updates(stream):
     async for record in stream:
-        instance = await get_channel(record["channel_id"], record["owner"])
+        instance = await get_playlist(record["playlist_id"], record["owner"])
         videos_ids = []
-        videos = []
+        videos_objs = []
+
+        total_views = 0
+        total_likes = 0
+        total_comments = 0
+        page_token = None
+
         google_api_key = await get_google_api_key(record["owner"])
-        payload = fetch_playlist_items_page(google_api_key, record["channel_id"])
-        videos_ids.extend(
-            [item.get("contentDetails").get("videoId") for item in payload.get("items")]
-        )
-        while page_token := payload.get("nextPageToken"):
+
+        while True:
             payload = fetch_playlist_items_page(
-                google_api_key, record["channel_id"], page_token
+                google_api_key, record["playlist_id"], page_token
             )
-            videos_ids.extend(
-                [
-                    item.get("contentDetails").get("videoId")
-                    for item in payload.get("items")
-                ]
+            page_token = payload.get("nextPageToken")
+            if page_token is None:
+                break
+            for video in payload.get("items"):
+                video_id = video.get("contentDetails").get("videoId")
+                videos_ids.append(video_id)
+
+        print(videos_ids)
+        videos_ids = list(set(videos_ids))
+        print(videos_ids)
+        page_token = None
+
+        while True:
+            payload = fetch_videos_page(
+                google_api_key, ",".join(videos_ids), page_token
             )
-        for video_id in videos_ids:
-            payload = fetch_videos_page(google_api_key, video_id)
-            videos.extend(payload.get("items"))
-            videos_objs = []
-            total_views = 0
-            total_likes = 0
-            total_comments = 0
-            for item in videos:
-                total_views += int(item.get("statistics").get("viewCount", 0))
-                total_likes += int(item.get("statistics").get("likeCount", 0))
-                total_comments += int(item.get("statistics").get("commentCount", 0))
-                video = await get_video(record["channel_id"], item.get("id"))
-                thumbnail = item.get("snippet").get("thumbnails").get("high")
+            page_token = payload.get("nextPageToken")
+            for video in payload.get("items"):
+                total_views += int(video.get("statistics").get("viewCount", 0))
+                total_likes += int(video.get("statistics").get("likeCount", 0))
+                total_comments += int(video.get("statistics").get("commentCount", 0))
+                thumbnail = video.get("snippet").get("thumbnails").get("high")
+
+                video = await get_video(record["playlist_id"], video.get("id"))
                 if not video:
                     videos_objs.append(
                         Video(
-                            title=item.get("snippet").get("title"),
-                            video_id=item.get("id"),
-                            description=item.get("snippet").get("description"),
-                            views=item.get("statistics").get("viewCount", 0),
-                            likes=item.get("statistics").get("likeCount", 0),
-                            comments=item.get("statistics").get("commentCount", 0),
+                            title=video.get("snippet").get("title"),
+                            video_id=video.get("id"),
+                            description=video.get("snippet").get("description"),
+                            views=video.get("statistics").get("viewCount", 0),
+                            likes=video.get("statistics").get("likeCount", 0),
+                            comments=video.get("statistics").get("commentCount", 0),
                             thumbnail=thumbnail.get("url") if thumbnail else None,
-                            channel=instance,
+                            playlist=instance,
                         )
                     )
                 else:
                     video_data = {
-                        "title": item.get("snippet").get("title"),
-                        "description": item.get("snippet").get("description"),
-                        "views": item.get("statistics").get("viewCount", 0),
-                        "likes": item.get("statistics").get("likeCount", 0),
-                        "comments": item.get("statistics").get("commentCount", 0),
+                        "title": video.get("snippet").get("title"),
+                        "description": video.get("snippet").get("description"),
+                        "views": video.get("statistics").get("viewCount", 0),
+                        "likes": video.get("statistics").get("likeCount", 0),
+                        "comments": video.get("statistics").get("commentCount", 0),
                         "thumbnail": thumbnail.get("url") if thumbnail else None,
                     }
                     await update_video(video, video_data)
-            if videos_objs:
-                await create_videos(videos_objs)
-            await update_channel(instance, total_views, total_comments, total_likes)
+            if page_token is None:
+                break
+        if videos_objs:
+            await create_videos(videos_objs)
+        await update_playlist(instance, total_views, total_comments, total_likes)
 
 
 @app.agent(video_changes_topic)
