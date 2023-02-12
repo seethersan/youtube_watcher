@@ -139,3 +139,5 @@ GitHub.sublime-settings
 staticfiles/
 secrets.yaml
 ingress.yaml
+docker-compose-local.yml
+django_acs_email
