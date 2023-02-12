@@ -79,6 +79,16 @@ spec:
                 secretKeyRef:
                   name: youtube-watcher-secrets
                   key: KAFKA_BOOTSTRAP_SERVERS
+            - name: ACS_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: ACS_CONNECTION_STRING
+            - name: ACS_SENDER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: ACS_SENDER_EMAIL
 ---
 apiVersion: apps/v1
 kind: Deployment
