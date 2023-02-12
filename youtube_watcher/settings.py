@@ -167,7 +167,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django_acs_email.ACSEmailBackend"
 
 GQL_AUTH = GqlAuthSettings(
     LOGIN_REQUIRE_CAPTCHA=False,
@@ -188,3 +188,6 @@ KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9
 CRON_CLASSES = [
     "channels.cron.CronGetChannels",
 ]
+# ACS Email
+ACS_CONNECTION_STRING = os.environ.get("ACS_CONNECTION_STRING", "")
+ACS_SENDER_EMAIL = os.environ.get("ACS_SENDER_EMAIL", "")

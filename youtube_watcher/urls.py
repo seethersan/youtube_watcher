@@ -16,12 +16,12 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.views.decorators.csrf import csrf_exempt
 from strawberry.django.views import AsyncGraphQLView, GraphQLView
 
 import youtube_watcher.relay_schema
-
+from users.views import VerifyEmailView
 from . import schema
 
 urlpatterns = [
@@ -43,4 +43,5 @@ urlpatterns = [
             AsyncGraphQLView.as_view(schema=youtube_watcher.relay_schema.relay_schema)
         ),
     ),
+    re_path(r"^activate/(?P<token>.*$)", VerifyEmailView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=str(settings.MEDIA_ROOT))
