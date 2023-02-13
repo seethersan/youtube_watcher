@@ -246,7 +246,7 @@ async def process_playlist_updates(stream):
                         "comments": video.get("statistics").get("commentCount", 0),
                         "thumbnail": thumbnail.get("url") if thumbnail else None,
                     }
-                    await update_video(video, video_data)
+                    await update_video(saved_video, video_data)
             if page_token is None:
                 break
         if videos_objs:
