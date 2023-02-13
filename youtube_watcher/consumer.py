@@ -140,10 +140,7 @@ async def process_playlist(stream):
                 video_id = video.get("contentDetails").get("videoId")
                 videos_ids.append(video_id)
 
-        print(videos_ids)
         videos_ids = list(set(videos_ids))
-        print(videos_ids)
-
         page_token = None
 
         while True:
@@ -212,9 +209,7 @@ async def process_playlist_updates(stream):
                 video_id = video.get("contentDetails").get("videoId")
                 videos_ids.append(video_id)
 
-        print(videos_ids)
         videos_ids = list(set(videos_ids))
-        print(videos_ids)
         page_token = None
 
         while True:
@@ -228,8 +223,8 @@ async def process_playlist_updates(stream):
                 total_comments += int(video.get("statistics").get("commentCount", 0))
                 thumbnail = video.get("snippet").get("thumbnails").get("high")
 
-                video = await get_video(record["playlist_id"], video.get("id"))
-                if not video:
+                saved_video = await get_video(record["playlist_id"], video.get("id"))
+                if not saved_video:
                     videos_objs.append(
                         Video(
                             title=video.get("snippet").get("title"),
