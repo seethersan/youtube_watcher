@@ -89,6 +89,26 @@ spec:
                 secretKeyRef:
                   name: youtube-watcher-secrets
                   key: ACS_SENDER_EMAIL
+            - name: USE_S3
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: USE_S3
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_STORAGE_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_STORAGE_BUCKET_NAME
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -185,6 +205,26 @@ spec:
                 secretKeyRef:
                   name: youtube-watcher-secrets
                   key: ACS_SENDER_EMAIL
+            - name: USE_S3
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: USE_S3
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_STORAGE_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: youtube-watcher-secrets
+                  key: AWS_STORAGE_BUCKET_NAME
 ---
 # START Service
 apiVersion: v1
